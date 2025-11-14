@@ -1,0 +1,146 @@
+.events-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.list-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1.5rem;
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.15rem;
+    font-size: 0.75rem;
+    color: rgba(15, 23, 42, 0.7);
+  }
+
+  .subtitle {
+    max-width: 480px;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+
+    input {
+      flex: 1;
+      min-width: 220px;
+      border: 1px solid rgba(15, 23, 42, 0.15);
+      border-radius: 999px;
+      padding: 0.85rem 1.25rem;
+    }
+
+    button,
+    a {
+      border-radius: 999px;
+      border: none;
+      padding: 0.85rem 1.5rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button {
+      background: rgba(99, 102, 241, 0.1);
+      color: #4c1d95;
+    }
+
+    .primary {
+      background: linear-gradient(110deg, #f97316, #ec4899, #8b5cf6);
+      color: white;
+      text-decoration: none;
+    }
+
+    .inline {
+      display: inline-block;
+      padding-inline: 1rem;
+      padding-block: 0.5rem;
+    }
+  }
+}
+
+.state {
+  background: rgba(15, 23, 42, 0.03);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  &.error {
+    border: 1px solid rgba(248, 113, 113, 0.5);
+    background: rgba(248, 113, 113, 0.1);
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.event-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: 0 15px 40px rgba(15, 23, 42, 0.1);
+
+  .card-body {
+    flex: 1;
+  }
+
+  .category {
+    display: inline-flex;
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(99, 102, 241, 0.12);
+    color: #4338ca;
+  }
+
+  h2 {
+    margin-top: 0.75rem;
+    font-size: 1.35rem;
+  }
+
+  .description {
+    margin-top: 0.25rem;
+    color: rgba(15, 23, 42, 0.65);
+  }
+
+  ul {
+    margin-top: 1rem;
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    span {
+      color: rgba(15, 23, 42, 0.6);
+      font-size: 0.85rem;
+    }
+  }
+
+  footer {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    padding-top: 1rem;
+
+    .ghost {
+      text-decoration: none;
+      font-weight: 600;
+      color: #7c3aed;
+    }
+  }
+}

@@ -1,0 +1,37 @@
+<div class="app-shell">
+  <header class="top-nav">
+    <a routerLink="/events" class="logo">
+      <span>🎫</span>
+      Evently
+    </a>
+
+    <nav>
+      <a routerLink="/events" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Etkinlikler</a>
+      <a routerLink="/tickets/mine" routerLinkActive="active">Biletlerim</a>
+      <a routerLink="/events/new" routerLinkActive="active">Etkinlik Oluştur</a>
+    </nav>
+
+    <div class="auth-actions">
+      <ng-container *ngIf="authService.currentUser$ | async as user; else guest">
+        <span class="user-chip">Merhaba, {{ user.firstName }}</span>
+        <button type="button" (click)="logout()">Çıkış</button>
+      </ng-container>
+
+      <ng-template #guest>
+        <a routerLink="/auth/login" class="ghost">Giriş Yap</a>
+        <a routerLink="/auth/register" class="primary">Kayıt Ol</a>
+      </ng-template>
+    </div>
+  </header>
+
+  <main class="viewport">
+    <router-outlet></router-outlet>
+  </main>
+
+  <footer class="app-footer">
+    <p>
+      API Gateway + Identity + Event + Ticket + Payment + Notification servisleri ile tam entegre mikroservis deneyimi.
+    </p>
+    <small>Frontend: Angular 18 • Backend: .NET 8 • Mesajlaşma: Kafka / RabbitMQ</small>
+  </footer>
+</div>

@@ -1,0 +1,58 @@
+<section class="events-wrapper">
+  <header class="list-header">
+    <div>
+      <p class="eyebrow">Evently • Mikroservis destekli etkinlik yönetimi</p>
+      <h1>Aktif Etkinlikler</h1>
+      <p class="subtitle">Kimliği doğrulanmış kullanıcılar yeni etkinlik yaratabilir ve bilet satışlarını yönetebilir.</p>
+    </div>
+
+    <div class="actions">
+      <input [formControl]="search" type="search" placeholder="Etkinlik ara (örn. İstanbul, Teknoloji...)" />
+      <button type="button" (click)="refresh()">Yenile</button>
+      <a *ngIf="authService.isAuthenticated" routerLink="/events/new" class="primary">Yeni Etkinlik</a>
+    </div>
+  </header>
+
+  <div class="state" *ngIf="loading">
+    Etkinlikler yükleniyor...
+  </div>
+
+  <div class="state error" *ngIf="error">
+    <p>{{ error }}</p>
+    <button type="button" (click)="refresh()">Tekrar dene</button>
+  </div>
+
+  <div class="state" *ngIf="!loading && !error && filteredEvents.length === 0">
+    <p>Henüz hiçbir etkinlik bulunamadı.</p>
+    <a *ngIf="authService.isAuthenticated" routerLink="/events/new" class="primary inline">İlk etkinliği sen oluştur</a>
+  </div>
+
+  <section class="grid" *ngIf="!loading && !error && filteredEvents.length > 0">
+    <article class="event-card" *ngFor="let event of filteredEvents; trackBy: trackByEvent">
+      <div class="card-body">
+        <div class="category">{{ event.category }}</div>
+        <h2>{{ event.title }}</h2>
+        <p class="description">{{ event.description }}</p>
+        <ul>
+          <li>
+            <span>Konum</span>
+            <strong>{{ event.location }}</strong>
+          </li>
+          <li>
+            <span>Başlangıç</span>
+            <strong>{{ event.startDate | date: 'd MMMM yyyy HH:mm' }}</strong>
+          </li>
+          <li>
+            <span>Fiyat</span>
+            <strong>{{ event.price | currency: 'TRY':'symbol':'1.0-0' }}</strong>
+          </li>
+        </ul>
+      </div>
+
+      <footer>
+        <small>{{ event.availableTickets }} / {{ event.totalTickets }} bilet</small>
+        <a [routerLink]="['/events', event.id]" class="ghost">Detayları Gör</a>
+      </footer>
+    </article>
+  </section>
+</section>

@@ -1,0 +1,29 @@
+<section class="auth-card">
+  <h1>Evently'ye Giriş</h1>
+  <p class="subtitle">Biletlerini yönetmek ve yeni etkinlikler oluşturmak için hesabına giriş yap.</p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <label>
+      E-posta
+      <input type="email" formControlName="email" placeholder="ornek@evently.com" />
+      <small *ngIf="form.get('email')?.invalid && form.get('email')?.touched">Geçerli bir e-posta gir.</small>
+    </label>
+
+    <label>
+      Şifre
+      <input type="password" formControlName="password" placeholder="•••••••" />
+      <small *ngIf="form.get('password')?.invalid && form.get('password')?.touched">Şifre en az 6 karakter olmalı.</small>
+    </label>
+
+    <button type="submit" [disabled]="loading">
+      {{ loading ? 'Giriş yapılıyor...' : 'Giriş Yap' }}
+    </button>
+
+    <p class="form-error" *ngIf="error">{{ error }}</p>
+  </form>
+
+  <p class="helper">
+    Hesabın yok mu?
+    <a routerLink="/auth/register">Hemen kayıt ol</a>
+  </p>
+</section>

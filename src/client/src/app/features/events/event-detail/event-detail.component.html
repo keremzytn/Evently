@@ -1,0 +1,73 @@
+<section *ngIf="loading" class="state">
+  Etkinlik yükleniyor...
+</section>
+
+<section *ngIf="error" class="state error">
+  <div>
+    <p>{{ error }}</p>
+    <a routerLink="/events" class="ghost">Etkinlik listesine dön</a>
+  </div>
+</section>
+
+<article *ngIf="event" class="detail-wrapper">
+  <a routerLink="/events" class="ghost back-link">← Tüm etkinliklere dön</a>
+
+  <header>
+    <div>
+      <p class="eyebrow">{{ event.category }}</p>
+      <h1>{{ event.title }}</h1>
+      <p class="description">{{ event.description }}</p>
+    </div>
+
+    <div class="meta">
+      <div>
+        <span>Tarih</span>
+        <strong>{{ event.startDate | date: 'd MMMM yyyy HH:mm' }}</strong>
+      </div>
+      <div>
+        <span>Lokasyon</span>
+        <strong>{{ event.location }}</strong>
+      </div>
+      <div>
+        <span>Bilet</span>
+        <strong>{{ event.availableTickets }} / {{ event.totalTickets }}</strong>
+      </div>
+    </div>
+  </header>
+
+  <section class="content">
+    <div class="info-card">
+      <h2>Etkinlik Akışı</h2>
+      <ul>
+        <li>
+          <span>Başlangıç</span>
+          <strong>{{ event.startDate | date: 'EEEE • HH:mm' }}</strong>
+        </li>
+        <li>
+          <span>Bitiş</span>
+          <strong>{{ event.endDate | date: 'EEEE • HH:mm' }}</strong>
+        </li>
+        <li>
+          <span>Organizatör</span>
+          <strong>{{ event.organizerId }}</strong>
+        </li>
+      </ul>
+    </div>
+
+    <aside class="purchase-card">
+      <h3>Bilet Satın Al</h3>
+      <p class="price">{{ event.price | currency: 'TRY':'symbol':'1.0-0' }}</p>
+
+      <ng-container *ngIf="authService.isAuthenticated; else guestMessage">
+        <button type="button" (click)="purchaseTicket()">Bilet Satın Al</button>
+        <p class="success" *ngIf="ticketMessage">{{ ticketMessage }}</p>
+        <p class="error" *ngIf="ticketError">{{ ticketError }}</p>
+      </ng-container>
+
+      <ng-template #guestMessage>
+        <p class="error">Bilet satın almak için giriş yapmalısın.</p>
+        <a routerLink="/auth/login" class="ghost">Hemen giriş yap</a>
+      </ng-template>
+    </aside>
+  </section>
+</article>

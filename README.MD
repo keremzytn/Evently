@@ -67,6 +67,28 @@ Evently/
 
 ---
 
+## 🖥️ Angular Client
+
+`src/client` dizininde bulunan Angular 18 tabanlı istemci, README’de belirtilen kullanıcı akışlarını uçtan uca deneyimlemek için hazırlandı.
+
+- Kimlik doğrulama (Identity Service üzerinden login/register)
+- Etkinlik listesi, detayları ve yeni etkinlik oluşturma (Event Service)
+- Bilet satın alma ve “Biletlerim” ekranı (Ticket Service)
+- API çağrıları Ocelot Gateway (`http://localhost:5000`) üzerinden, JWT + `X-User-Id` başlıklarıyla yapılır.
+
+### Kurulum & Geliştirme
+
+```bash
+cd src/client
+npm install
+npm start
+```
+
+- Varsayılan API adresi `src/client/src/environments/environment.ts` dosyasında tutulur.
+- Prod ortamı için `environment.production.ts` içerisindeki `apiBaseUrl` değerini gateway’inize göre güncellemeniz yeterlidir.
+
+---
+
 ## 🔄 Servisler Arası İletişim Akışı
 
 1. Kullanıcı bilet satın alır → **Ticket Service** bir `TicketCreatedEvent` yayınlar (Kafka).  
