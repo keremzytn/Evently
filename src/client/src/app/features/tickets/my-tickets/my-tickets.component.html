@@ -1,0 +1,44 @@
+<section class="tickets-wrapper">
+  <header>
+    <div>
+      <p class="eyebrow">Ticket Service</p>
+      <h1>Biletlerim</h1>
+      <p>Satın aldığın biletlerin QR kodu ve ödeme durumunu buradan takip edebilirsin.</p>
+    </div>
+    <button type="button" (click)="refresh()">Yenile</button>
+  </header>
+
+  <div class="state" *ngIf="loading">Biletler yükleniyor...</div>
+
+  <div class="state error" *ngIf="error">
+    <p>{{ error }}</p>
+  </div>
+
+  <div class="state" *ngIf="!loading && !error && tickets.length === 0">
+    <p>Henüz satın aldığın bir bilet yok.</p>
+  </div>
+
+  <div class="ticket-grid" *ngIf="tickets.length > 0">
+    <article *ngFor="let ticket of tickets; trackBy: trackByTicket">
+      <div>
+        <span>Etkinlik Kimliği</span>
+        <strong>{{ ticket.eventId }}</strong>
+      </div>
+      <div>
+        <span>Bilet Kodu</span>
+        <strong>{{ ticket.ticketCode }}</strong>
+      </div>
+      <div>
+        <span>Fiyat</span>
+        <strong>{{ ticket.price | currency: 'TRY':'symbol':'1.0-0' }}</strong>
+      </div>
+      <div>
+        <span>Satın alma</span>
+        <strong>{{ ticket.purchasedAt | date: 'd MMM yyyy HH:mm' }}</strong>
+      </div>
+      <div class="status" [attr.data-status]="ticket.status">
+        {{ ticket.status }}
+      </div>
+    </article>
+  </div>
+</section>

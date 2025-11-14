@@ -1,0 +1,68 @@
+<section class="form-wrapper">
+  <header>
+    <h1>Yeni Etkinlik Oluştur</h1>
+    <p>Event Service üzerinden bir etkinlik kaydı açarak Ticket Service ile bilet satışını başlat.</p>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div class="grid two">
+      <label>
+        Başlık
+        <input type="text" formControlName="title" placeholder="Evently Summit 2025" />
+      </label>
+
+      <label>
+        Kategori
+        <input type="text" formControlName="category" placeholder="Teknoloji" />
+      </label>
+    </div>
+
+    <label>
+      Açıklama
+      <textarea formControlName="description" rows="4" placeholder="Etkinliğin detaylarını paylaş."></textarea>
+    </label>
+
+    <div class="grid two">
+      <label>
+        Konum
+        <input type="text" formControlName="location" placeholder="İstanbul / Bomontiada" />
+      </label>
+
+      <label>
+        Görsel URL
+        <input type="url" formControlName="imageUrl" placeholder="https://..." />
+      </label>
+    </div>
+
+    <div class="grid three">
+      <label>
+        Başlangıç
+        <input type="datetime-local" formControlName="startDate" />
+      </label>
+
+      <label>
+        Bitiş
+        <input type="datetime-local" formControlName="endDate" />
+      </label>
+
+      <label>
+        Fiyat (₺)
+        <input type="number" min="0" formControlName="price" />
+      </label>
+    </div>
+
+    <div class="grid two">
+      <label>
+        Toplam Bilet
+        <input type="number" min="1" formControlName="totalTickets" />
+      </label>
+    </div>
+
+    <div class="actions">
+      <button type="submit" [disabled]="loading">
+        {{ loading ? 'Kaydediliyor...' : 'Etkinliği Kaydet' }}
+      </button>
+      <p class="error" *ngIf="error">{{ error }}</p>
+    </div>
+  </form>
+</section>

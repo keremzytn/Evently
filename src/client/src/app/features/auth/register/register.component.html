@@ -1,0 +1,43 @@
+<section class="auth-card">
+  <h1>Yeni Hesap Oluştur</h1>
+  <p class="subtitle">Evently ekosistemine katıl ve etkinliklerini tek panelden yönet.</p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div class="grid">
+      <label>
+        Ad
+        <input type="text" formControlName="firstName" placeholder="Ayşe" />
+        <small *ngIf="form.get('firstName')?.invalid && form.get('firstName')?.touched">Ad en az 2 karakter olmalı.</small>
+      </label>
+
+      <label>
+        Soyad
+        <input type="text" formControlName="lastName" placeholder="Yılmaz" />
+        <small *ngIf="form.get('lastName')?.invalid && form.get('lastName')?.touched">Soyad en az 2 karakter olmalı.</small>
+      </label>
+    </div>
+
+    <label>
+      E-posta
+      <input type="email" formControlName="email" placeholder="ornek@evently.com" />
+      <small *ngIf="form.get('email')?.invalid && form.get('email')?.touched">Geçerli bir e-posta gir.</small>
+    </label>
+
+    <label>
+      Şifre
+      <input type="password" formControlName="password" placeholder="•••••••" />
+      <small *ngIf="form.get('password')?.invalid && form.get('password')?.touched">Şifre en az 6 karakter olmalı.</small>
+    </label>
+
+    <button type="submit" [disabled]="loading">
+      {{ loading ? 'Kayıt işlemi devam ediyor...' : 'Kayıt Ol' }}
+    </button>
+
+    <p class="form-error" *ngIf="error">{{ error }}</p>
+  </form>
+
+  <p class="helper">
+    Zaten hesabın var mı?
+    <a routerLink="/auth/login">Giriş yap</a>
+  </p>
+</section>
