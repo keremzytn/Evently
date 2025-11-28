@@ -1,185 +1,215 @@
-# Evently Temel Özellikleri
+# Evently Temel Özellikler Planı
 
-Bu doküman Evently platformuna eklenecek çekirdek kullanıcı özelliklerinin veri modellerini, servis sınırlarını ve entegrasyon noktalarını özetler.
+Bu doküman Evently platformuna eklenecek temel kullanıcı özelliklerinin veri modellerini, servis sınırlarını ve entegrasyon noktalarını detaylandırır. Amaç; tüm domain ekiplerinin aynı şema, API ve mesajlaşma sözleşmeleri üzerinde hizalanmasıdır.
 
 ## 1. Yorum & Değerlendirme Sistemi
 
 ### Veri Modeli
-- `EventFeedback`: `Id`, `EventId`, `UserId`, `Rating (1-5)`, `Comment`, `Status (Pending|Approved|Rejected)`, `ModeratorId`, `CreatedAt`, `UpdatedAt`.
-- `EventAggregateRating`: `EventId`, `AverageRating`, `ReviewCount`, `LastRecalculatedAt`.
+- `EventFeedback`: `Id`, `EventId`, `UserId`, `Rating (1-5)`, `Comment`, `Status (Pending|Approved|Rejected)`, `CreatedAt`.
+- `EventRatingSummary`: `EventId`, `AverageRating`, `ReviewCount`, `LastCalculatedAt`.
+- Statüler moderasyon servisi tarafından güncellenir; `Status` değiştikçe mesaj tetiklenir.
 
-### Servisler ve API
-- `src/EventService/Controllers/FeedbackController`: 
-  - `POST /events/{id}/feedback`: yorum ekler, varsayılan durum `Pending`.
-  - `GET /events/{id}/feedback`: onaylı yorumları sayfalı döndürür.
-  - `GET /events/{id}/rating`: `EventAggregateRating` döner.
-  - `PATCH /feedback/{id}`: moderasyon statü güncellemesi.
-- `IFeedbackRepository`: Mongo koleksiyonları `eventFeedback` ve `eventAggregateRatings`.
-- Ortalama puan; moderasyon onayı sonrası `feedback-events` Kafka mesajı ile `NotificationService` ve `EventService` içi `FeedbackAggregationHandler`’a yayınlanır.
+### FeedbackController Taslağı (`src/EventService/Controllers/FeedbackController`)
+- `POST /events/{eventId}/feedback` → kullanıcı yorum oluşturur, `Pending` kaydedilir.
+- `GET /events/{eventId}/feedback` → onaylı yorumlar için sayfalı liste (`page`, `pageSize`, `sort=recent|rating`).
+- `GET /events/{eventId}/feedback/{feedbackId}` → tek kayıt detayını döner.
+- `PUT /feedback/{feedbackId}` → yorum içeriğini veya puanını günceller (sadece sahip tarafından, `Status=Pending` ise).
+- `PATCH /feedback/{feedbackId}/status` → moderatör `Status` ve opsiyonel `ModeratorNote` belirler.
+- `DELETE /feedback/{feedbackId}` → içerik sahibi veya admin tarafından kaldırılır.
+- `GET /events/{eventId}/feedback/average` → `EventRatingSummary` döner; boşsa anlık hesaplanır.
 
-### Bildirim Akışı
-- `NotificationService` `feedback-events` topic’ini tüketir:
-  - `FeedbackApproved` → Etkinlik sahibine e-posta.
-  - `FeedbackRejected` → Kullanıcıya ret gerekçesi.
-  - `FeedbackReplied` → Yorum sahibine yanıt bildirimi.
+### `IFeedbackRepository` Taslağı
+- `Task<EventFeedback> CreateAsync(EventFeedback feedback)`
+- `Task<EventFeedback?> GetAsync(Guid id)`
+- `Task<Paginated<EventFeedback>> ListByEventAsync(Guid eventId, FeedbackFilter filter)`
+- `Task UpdateAsync(EventFeedback feedback)` (içerik düzenleme)
+- `Task UpdateStatusAsync(Guid id, FeedbackStatus status, Guid moderatorId)`
+- `Task DeleteAsync(Guid id)`
+- `Task<EventRatingSummary> GetSummaryAsync(Guid eventId)`
+- `Task UpsertSummaryAsync(EventRatingSummary summary)`
+- Depolama: PostgreSQL tablo + `event_feedback_status_idx`, ayrıca ortalama puan için materialized view veya Redis cache.
 
-### Moderasyon ve Ölçüm
-- Otomatik filtreleme için basit kötü içerik listesi + opsiyonel NLP servisi.
-- `Status=Pending` kayıtlar 24 saat içinde sonuçlanmazsa SLA uyarısı; `NotificationService` geciken kayıtları haftalık raporlar.
+### Ortalama Puan Hesaplama
+1. Yeni yorum `Pending` iken ortalama değişmez.
+2. `Status=Approved` olduğunda `FeedbackAggregationHandler` ortalamayı yeniden hesaplar ve `feedback-events` topic’ine `FeedbackApproved` mesajı yollar.
+3. `FeedbackUpdated` veya `FeedbackDeleted` durumunda summary tekrar güncellenir.
+
+### Bildirim & Moderasyon Akışı (`src/NotificationService`)
+- `feedback-events` Kafka topic şemaları:
+  - `FeedbackApproved` → etkinlik sahibine teşekkür e-postası, yorum sahibine onay bildirimi.
+  - `FeedbackRejected` → kullanıcıya ret gerekçesi + tekrar gönderme linki.
+  - `FeedbackReplied` → organizatör yanıtı için e-posta/SMS.
+- Moderasyon SLA: 24 saat boyunca `Pending` kalan kayıtlar için `NotificationService` dashboard / e-posta uyarısı.
 
 ## 2. Favori / İstek Listesi
 
 ### Veri Modeli
-- `UserFavorite`: `Id`, `UserId`, `EventId`, `Pinned (bool)`, `CreatedAt`.
-- `FavoriteReminder`: `FavoriteId`, `ReminderOffsetMinutes`, `NotificationChannel (Email|SMS|Push)`.
+- `UserFavorites`: `Id`, `UserId`, `EventId`, `Labels[]`, `ReminderOffsetMinutes (nullable)`, `Notifications (Email|SMS|Push)`, `CreatedAt`, `UpdatedAt`.
+- `UNIQUE(UserId, EventId)` kısıtı aynı etkinliğin tekrar eklenmesini engeller.
 
-### API ve Davranış
-- `POST /users/me/favorites` → mevcut değilse ekler, varsa 200 döner.
-- `DELETE /users/me/favorites/{eventId}` → kaldırır.
-- `GET /users/me/favorites` → etkinlik meta bilgisiyle birlikte sayfalı liste.
-- `PATCH /users/me/favorites/{eventId}` → `Pinned` veya hatırlatma bilgilerini günceller.
-- EventService favori eylemlerini `favorite-events` topic’ine yazar; NotificationService tetiklenir.
+### EventService API’ları
+- `POST /users/me/favorites` → yeni kayıt, mevcutsa 200 + body döner.
+- `DELETE /users/me/favorites/{eventId}` → ilişkiyi kaldırır.
+- `GET /users/me/favorites?page=&pageSize=` → etkinlik meta bilgisiyle döner.
+- `PATCH /users/me/favorites/{eventId}` → `Labels`, `ReminderOffsetMinutes` veya kanal ayarlarını günceller.
+- Her eylem `favorite-events` topic’ine (`FavoriteAdded`, `FavoriteRemoved`, `FavoriteUpdated`) yazılır.
 
-### Hatırlatıcılar
-- `NotificationService` Hangfire/Quartz job’ı favori etkinlik başlangıcından `ReminderOffsetMinutes` önce e-posta/SMS gönderir.
-- Favori listesi ile takvim girişleri senkron tutmak için `CalendarSyncHandler`.
+### Hatırlatma Planı (`src/NotificationService`)
+- Favoriye eklenen etkinlik başlangıç zamanından `ReminderOffsetMinutes` önce Hangfire/Quartz job’ı tetiklenir.
+- Job payload’ı `feedback-events` benzeri `favorite-reminders` kuyruğuna düşer, kanal bazlı şablon seçilir.
+- Opsiyonel bundling: aynı gün içinde birden fazla favori varsa tek e-posta içinde liste gönderilir.
 
 ## 3. Arama & Filtreleme
 
-### Arama Parametreleri
-- `q` (serbest metin), `categoryIds[]`, `startDate`, `endDate`, `minPrice`, `maxPrice`, `city`, `venue`, `page`, `pageSize`, `sort` (`popularity|date|price`).
+### Endpoint
+- `GET /events/search`
+  - Parametreler: `q`, `categoryIds[]`, `startDate`, `endDate`, `minPrice`, `maxPrice`, `city`, `lat`, `lon`, `radiusKm`, `page (default 1)`, `pageSize (default 20, max 100)`, `sort=popularity|date|price_asc|price_desc`.
+  - Yanıt: `items[]`, `total`, `page`, `pageSize`, `facets { categories, cities, priceRange }`.
+- `GET /events/search/filters` → kategori, şehir, fiyat bantları, tarih aralık presetlerini döner.
 
-### Teknik Strateji
-- Depo Postgres ise `tsvector` full-text; ölçek ihtiyacı yüksek ise ElasticSearch cluster’ı (`events-index`) tutulur.
-- Etkinlik kayıtları EventService tarafından `events-index`’e senkron push edilir (CDC ya da publish-on-write).
-- Filtreler; kategori ve şehir için keyword fields, fiyat için numeric range, tarih için `date_histogram`.
-
-### API
-- `GET /events/search` → default `pageSize=20`, maksimum 100.
-- `GET /events/filters/meta` → kullanılabilir kategoriler, şehirler, fiyat aralığı.
+### Arama Motoru Seçimi
+- Başlangıçta PostgreSQL `tsvector` + GIN index (`events_search_idx`).
+- Trafik arttığında aynı yayın akışıyla ElasticSearch `events-v1` index’i beslenir.
+- CDC modeli: EventService write path’i Kafka `event-catalog` topic’ine yazar, hem Postgres hem Elastic tüketicileri indeksleri günceller.
+- Elastic mapping: `name` ve `description` için `text` + `keyword`, `categoryIds` için `keyword`, `price` için `double`, `eventDate` için `date`, `location` için `geo_point`.
+- Pagination: search motorunun `from/size` limitini aşmamak için `search_after` planlanır.
 
 ## 4. Etkinlik Takvimi
 
 ### Veri Modeli
-- `CalendarEntry`: `Id`, `UserId`, `EventId`, `Source (Favorite|Ticket|Manual)`, `ReminderMinutesBefore`, `SyncStatus`.
+- `CalendarEntry`: `Id`, `UserId`, `EventId (nullable)`, `Title`, `StartUtc`, `EndUtc`, `Source (Favorite|Ticket|Manual)`, `ReminderMinutesBefore`, `SyncStatus (Pending|Synced|Failed)`, `CreatedAt`.
 
-### Servisler
-- `CalendarController`:
-  - `GET /users/me/calendar?rangeStart=&rangeEnd=` → tekleştirilmiş liste.
-  - `POST /users/me/calendar` → manuel giriş.
-  - `DELETE /users/me/calendar/{entryId}`.
-  - `GET /users/me/calendar/export.ics` → ICS oluşturur.
-- Hatırlatıcılar NotificationService job kuyruğunda saklanır; ICS üretimi için `IcsBuilder`.
+### `CalendarController` (`src/EventService/Controllers/CalendarController`)
+- `GET /users/me/calendar?rangeStart=&rangeEnd=` → kaynak birleşik liste.
+- `POST /users/me/calendar` → manuel kayıt (zorunlu alanlar: `Title`, `StartUtc`).
+- `DELETE /users/me/calendar/{entryId}` → kayıt siler.
+- `GET /users/me/calendar/export.ics?rangeStart=&rangeEnd=` → ICS dosyası; backend `IcsBuilder` bileşeni üretir.
+- Bilet satın alma ve favori ekleme akışları `CalendarEntry` oluşturmak için domain event yayınlar (`calendar-events` topic).
 
-### Harici Entegrasyonlar
-- Google/Apple Calendar push planı: OAuth token saklama + webhook (optional future).
-- Favori ve bilet satın alma akışları `CalendarEntry` ekler (`Source` alanı ile ayrıştırılır).
+### Hatırlatıcı Scheduling
+- `NotificationService` Hangfire job’ları `ReminderMinutesBefore` değerine göre planlanır, kuyruk gecikmesini azaltmak için Redis tabanlı delayed queue kullanılır.
+- Dışa aktarım sonrası Google/Apple Calendar senkronizasyonu için OAuth token saklayacak `CalendarSyncService` stub’ı eklenir.
 
 ## 5. QR Kod Okuma
 
-### QR Formatı
-- Payload JSON: `{ "ticketId": "...", "eventId": "...", "userId": "...", "seatCode": "...", "issuedAt": epoch, "signature": "HMACSHA256" }`.
-- İmzalar `TicketService` sunucu tarafı `QR_SIGNING_KEY` ile üretilir.
+### QR Payload Formatı
+```
+{
+  "ticketId": "GUID",
+  "eventId": "GUID",
+  "userId": "GUID",
+  "seatCode": "SECTION-ROW-SEAT",
+  "issuedAt": 1732798000,
+  "signature": "HMACSHA256(payload, QR_SIGNING_KEY)"
+}
+```
+- Payload base64-url kodlanır, 60 saniyeden eski taramalarda uyarı verilir.
 
-### Doğrulama Akışı
-- `POST /tickets/verify-qr` → QR payload + tarama cihazı `deviceId`.
-- Adımlar:
-  1. İmza doğrula.
-  2. Ticket durumu (`Valid|CheckedIn|Revoked`) kontrol.
-  3. Opsiyonel `seatCode` eşleşmesi.
-  4. Başarılıysa `CheckIn` eventi yayınla (`ticket-checkins` topic).
+### Doğrulama Endpoint’i (`src/TicketService`)
+- `POST /tickets/qr/verify`
+  1. İmza doğrulanır.
+  2. Ticket durumu (`Valid|CheckedIn|Revoked`) kontrol edilir.
+  3. Opsiyonel `seatCode` eşleşmesi ve cihaz `deviceId` loglanır.
+  4. Başarılı ise `ticket-checkins` topic’ine `CheckInCompleted` mesajı, ayrıca `NotificationService` anlık onay e-postası.
 
-### İstemci Gereksinimleri
-- Web: `apps/client/src/app/components/qr-scanner` içinde `@zxing/browser` kullanımı, kamera izin uyarıları.
-- Mobil: Capacitor plugin ile yerel kamera erişimi.
+### `apps/web` QrScanner Gereksinimleri
+- `apps/web/src/components/QrScanner` bileşeni `@zxing/browser` kullanarak kamera akışını yönetir.
+- Özellikler: otomatik kamera seçimi, manuel kamera değiştirme, düşük ışık modu uyarıları, tarama başarısız olduğunda fallback manuel kod girme alanı.
+- Mobil tarayıcılar için `BarcodeDetector` API desteklenirse native fallback; aksi halde WebRTC akışı.
 
 ## 6. Koltuk Seçimi
 
-### Veri Modeli
-- `SeatingPlan`: `Id`, `EventId`, `Sections[]` (ad, sıra, sütun, kategori, fiyat).
-- `SeatLock`: `SeatId`, `UserId`, `ExpiresAt`, `Status (Held|Committed|Expired)`.
+### Veri Modelleri
+- `SeatingPlan`: `Id`, `EventId`, `Version`, `Sections[]` (her biri `Name`, `Rows`, `Columns`, `Category`, `Price`), `AccessibilityTags[]`.
+- `SeatLock`: `SeatId`, `UserId`, `LockToken`, `ExpiresAt`, `Status (Held|Committed|Expired)`, `CreatedAt`.
 
 ### Akış
-- Event sayfası `GET /events/{id}/seating-plan` çağırır.
-- Kullanıcı koltuk seçince `POST /tickets/locks` → 5 dk TTL ile kilitler, Redis veya PostgreSQL advisory lock.
-- Ödeme tamamlanınca `SeatLock` `Committed` olur, Kafka `seat-updates` topic’ine yayınlanır ve UI canlı güncellenir.
-- Locks job’ı periyodik olarak `Expired` durumuna çeker.
+1. UI `GET /events/{eventId}/seating-plan` ile planı alır.
+2. Kullanıcı koltuk seçince `POST /tickets/locks` → 5 dk TTL, Redis veya PostgreSQL advisory lock.
+3. Ödeme tamamlandığında `SeatLock` `Committed` olur, Kafka `seat-updates` topic’ine `SeatCommitted` mesajı yayınlanır.
+4. Süresi dolan kilitler `SeatLockSweeper` job’ı ile `Expired` olur ve `seat-updates` üzerinden UI’ya itilir.
 
 ### UI Gereksinimleri
-- SVG/Canvas tabanlı grid, engelli erişim ve fiyat legend’i.
-- Mobilde pinch-zoom, koltuk durum legend’i (uygun, tutuldu, satıldı).
+- SVG/Canvas tabanlı etkileşimli grid, renk legend’i (uygun, rezerve, satıldı, engelli erişim).
+- Mobilde pinch-to-zoom ve tek dokunuşla seçim, masaüstünde çoklu seçim.
+- Gerçek zamanlı koltuk durumu için WebSocket aboneliği (NotificationService).
 
 ## 7. Bilet İptal / İade
 
-### Politika
-- Etkinlik başlamadan `X` saat öncesine kadar ücretsiz iptal; sonrası organizatör onayına tabi.
-- Promosyon biletleri için kısmi iade veya kupon.
+### Politika Kuralları
+- Etkinlikten `X` saat öncesine kadar ücretsiz iptal; sonrası organizatör onayına bağlı, `LateCancellationFee` uygulanabilir.
+- Promosyon veya partner kampanya biletlerinde sadece kupon iadesi yapılabilir.
+- Organizasyon iptallerinde tam iade + servis ücreti.
 
-### Akış
-1. Kullanıcı `POST /tickets/{id}/cancel` çağırır, `reason` alanı ile.
-2. TicketService politika kontrolü yapar, uygun ise `CancellationPending`.
-3. `ticket-cancellations` Kafka mesajı hem PaymentService hem NotificationService’e gider.
-4. PaymentService iade tutarını hesaplar (`netAmount - nonRefundableFees`) ve ödeme sağlayıcısına `refundId` alır.
-5. Payment sonucu `RefundSucceeded|RefundFailed` olayları yayılarak bilet durumu güncellenir.
+### Akış & PaymentService Entegrasyonu
+1. Kullanıcı `POST /tickets/{ticketId}/cancel` + `reason` gönderir.
+2. `TicketService` kural uygunsa `CancellationPending` durumuna çeker ve `ticket-cancellations` topic’ine mesaj yollar.
+3. `PaymentService` `RefundCalculator` ile iade tutarını belirler (`netAmount - nonRefundableFees`).
+4. Ödeme sağlayıcısı (Stripe/Adyen) üzerinden `refundId` oluşturulur, statü `RefundSucceeded|RefundFailed` olarak `payment-events` topic’inde paylaşılır.
+5. Ticket durumu `Refunded|RefundDeclined` olarak güncellenir, NotificationService ilgili şablonu tetikler.
 
 ### Bildirimler
-- Duruma göre e-posta/SMS şablonları:
-  - `ticket-cancel-received`
-  - `ticket-refund-approved`
-  - `ticket-refund-declined`
+- `ticket-cancel-received` → isteğin alındığını doğrular.
+- `ticket-refund-approved` / `ticket-refund-declined` → e-posta/SMS.
+- Organizasyona yönlendirilen iptal talepleri için admin panel uyarısı.
 
 ## 8. İndirim Kuponları
 
-### Veri Modeli
-- `PromoCode`: `Code`, `Type (Percentage|Fixed|BOGO)`, `Value`, `Currency`, `UsageLimit`, `PerUserLimit`, `ValidFrom`, `ValidUntil`, `AppliesTo (Global|Event|Organizer)`, `MinOrderAmount`, `Status`.
-- `PromoUsage`: `PromoId`, `UserId`, `OrderId`, `UsedAt`, `DiscountAmount`.
+### Veri Modeli (`src/PaymentService`)
+- `PromoCode`: `Id`, `Code`, `Type (Percentage|Fixed|BOGO)`, `Value`, `Currency`, `UsageLimit`, `PerUserLimit`, `ValidFrom`, `ValidUntil`, `AppliesTo (Global|Event|Organizer)`, `MinOrderAmount`, `Status (Draft|Active|Inactive|Expired)`, `CreatedBy`.
+- `PromoUsage`: `Id`, `PromoId`, `UserId`, `OrderId`, `UsedAt`, `DiscountAmount`, `Channel (Web|Mobile)`.
 
-### Kullanım Akışı
-1. Checkout sırasında `POST /payments/promo/validate` ile doğrulama.
-2. Dönen cevap: `isValid`, `discountAmount`, `summary`.
-3. Sipariş tamamlanınca PaymentService `PromoUsage` kaydı oluşturur.
-4. Limitler aşılırsa `PromoCode` `Inactive` olur; yöneticilere rapor.
+### Doğrulama Akışı
+1. Checkout sırasında `POST /payments/promo/validate` çağrısı yapılır; request `code`, `cartTotal`, `eventId`, `userId` içerir.
+2. Response: `isValid`, `discountAmount`, `currency`, `reasonCode`.
+3. Sipariş tamamlandığında `PromoUsage` oluşturulur; concurrency için `UsageCounter` tablosu `SELECT ... FOR UPDATE` ile güncellenir.
+4. Limitler dolduğunda `PromoCode` `Inactive` olur ve `promo-events` topic’i üzerinden yöneticilere bildirilir.
 
-### Raporlama
-- Günlük/haftalık kupon performansı, `docs/core-features.md`’deki tabloyu temel alan `PromoReportJob`.
-- Fraud tespiti için aynı kullanıcı kartı + IP kombinasyonlarını incele.
+### Loglama & Raporlama
+- Her doğrulama isteği `promo_validation_logs` tablosuna (valid/invalid, IP, cihaz) yazılır.
+- Günlük job (`PromoReportJob`) `docs/reports/promo-YYYYMMDD.csv` üretir; hata ve fraud örüntülerini Grafana dashboard’ına gönderir.
+- Şüpheli aktivitelerde NotificationService Slack/Webhook bildirimi gönderir.
 
 ## 9. Katılımcı Sayacı
 
-### Akış
-- TicketService `ticket-checkins` ve `ticket-purchases` olaylarını `EventMetricsAggregator`’a gönderir.
-- `EventMetricsAggregator` Redis’de `event:{id}:attendees` anahtarı tutar.
-- Event sayfası WebSocket/SSE ile `NotificationService` üzerinden gerçek zamanlı güncelleme alır.
+### Yayın Akışı
+- `TicketService` `ticket-purchases` ve `ticket-checkins` olaylarını üretir.
+- `EventService.EventMetricsAggregator` bu olayları tüketip Redis’de `event:{eventId}:attendees` anahtarını günceller (`purchased`, `checkedIn`).
+- `NotificationService` WebSocket/SSE kanalı üzerinden istemcilere `AttendeeCountUpdated` payload’ı yayınlar.
 
-### Ölçeklenebilirlik
-- Redis Cluster + TTL (etkinlik bitişinden sonra 24 saat).
-- Snapshot job’ı değerleri analitik veri ambarına yazar.
+### Ölçeklenebilirlik & Cache Stratejisi
+- Redis Cluster + TTL (etkinlik bitişinden 24 saat sonra otomatik silinir).
+- Evrensel counter snapshot’ları saatlik olarak Postgres/ClickHouse analitik tablosuna dump edilir.
+- Önyüz istemcileri SSE akışı düşerse fallback olarak `GET /events/{id}/attendees/live` endpoint’ini çağırır (Redis okuması).
 
 ## 10. Email / SMS Bildirimleri
 
-### Servis Entegrasyonları
-- SMTP: SendGrid veya Amazon SES; `NOTIFICATION_SMTP_*` konfigürasyonları.
-- SMS: Twilio (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`).
+### Servis Entegrasyonları (`src/NotificationService`)
+- SMTP: SendGrid veya Amazon SES; `NOTIFICATION_SMTP_HOST`, `PORT`, `USERNAME`, `PASSWORD`, `FROM_ADDRESS` environment değişkenleri.
+- SMS: Twilio REST API (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`).
+- Kanal seçimi `NotificationPreference` tablosuna göre yapılır; başarısız SMS gönderimleri 3 kez retry + Dead Letter Queue.
 
 ### Şablon Matrisi
-| Özellik | Şablon | Kanal | Tetikleyici |
+| Özellik | Şablon Adı | Kanal | Tetikleyici Olay |
 | --- | --- | --- | --- |
-| Yorum Onaylandı | `feedback-approved` | Email | `FeedbackApproved` |
-| Yorum Reddedildi | `feedback-rejected` | Email | `FeedbackRejected` |
-| Favori Hatırlatma | `favorite-reminder` | Email/SMS | Favori etkinlik başlangıcı |
+| Yorum Onay | `feedback-approved` | Email | `FeedbackApproved` |
+| Yorum Ret | `feedback-rejected` | Email | `FeedbackRejected` |
+| Yorum Yanıtı | `feedback-replied` | Email/SMS | `FeedbackReplied` |
+| Favori Hatırlatma | `favorite-reminder` | Email/SMS | Favori başlangıç job’u |
 | Takvim Hatırlatma | `calendar-reminder` | Email/SMS | `ReminderMinutesBefore` job |
-| QR Check-in | `ticket-checkin-confirmed` | Email | Başarılı tarama |
-| Koltuk Kilidi Süresi Doldu | `seat-lock-expired` | Email/SMS | Lock job |
+| QR Check-in | `ticket-checkin-confirmed` | Email | `CheckInCompleted` |
+| Koltuk Kilidi Süresi Doldu | `seat-lock-expired` | Email/SMS | `SeatLockExpired` |
 | İptal Talebi | `ticket-cancel-received` | Email | Cancel endpoint |
 | İade Onayı | `ticket-refund-approved` | Email/SMS | `RefundSucceeded` |
+| İade Reddedildi | `ticket-refund-declined` | Email/SMS | `RefundFailed` |
 | Promo Kullanımı | `promo-confirmation` | Email | Başarılı ödeme |
+| Katılımcı Milestone | `attendance-milestone` | Email | Belirli eşiklere ulaşıldığında |
 
 ### Operasyonel Notlar
-- Bildirim şablonları `NotificationService` içinde dosya tabanlı veya veritabanı tabanlı saklanır.
-- Retries için `DeadLetterQueue` (Kafka) + manuel replay konsolu.
-- Her mesajda `traceId` loglanır, merkezi observability (Grafana/Loki) ile izlenir.
+- Şablonlar JSON+Handlebars formatında versiyonlu saklanır; her yayın `traceId` içerir.
+- Retries için Kafka DLQ + manuel replay konsolu.
+- Observability: tüm bildirimler OpenTelemetry trace’i yayınlar, Grafana/Loki dashboard’larına bağlanır.
 
 ---
 
 Son güncelleme: `2025-11-28`
-
