@@ -18,9 +18,18 @@ builder.Host.UseSerilog();
 builder.Services.AddDbContext<TicketDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Kafka
-var kafkaBootstrapServers = builder.Configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
-builder.Services.AddSingleton(new KafkaProducer(kafkaBootstrapServers));
+// Kafka - opsiyonel
+var kafkaBootstrapServers = builder.Configuration["Kafka:BootstrapServers"];
+if (!string.IsNullOrEmpty(kafkaBootstrapServers))
+{
+    Log.Information("Kafka producer başlatılıyor: {BootstrapServers}", kafkaBootstrapServers);
+    builder.Services.AddSingleton(new KafkaProducer(kafkaBootstrapServers));
+}
+else
+{
+    Log.Warning("Kafka yapılandırması bulunamadı. TicketService Kafka olmadan çalışacak.");
+    builder.Services.AddSingleton<KafkaProducer>(_ => null!);
+}
 
 // Services
 builder.Services.AddScoped<ITicketService, TicketServiceImpl>();
@@ -32,7 +41,15 @@ builder.Services.AddHealthChecks()
 // Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Ticket Service API",
+        Version = "v1",
+        Description = "Ticket Management Service for Evently"
+    });
+});
 
 // CORS
 builder.Services.AddCors(options =>

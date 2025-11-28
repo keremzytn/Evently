@@ -84,6 +84,76 @@
                 "PUT",
                 "DELETE"
             ]
+        },
+        {
+            "DownstreamPathTemplate": "/health",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "identity-service",
+                    "Port": 8080
+                }
+            ],
+            "UpstreamPathTemplate": "/identity/health",
+            "UpstreamHttpMethod": [
+                "GET"
+            ]
+        },
+        {
+            "DownstreamPathTemplate": "/health",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "event-service",
+                    "Port": 8080
+                }
+            ],
+            "UpstreamPathTemplate": "/events/health",
+            "UpstreamHttpMethod": [
+                "GET"
+            ]
+        },
+        {
+            "DownstreamPathTemplate": "/health",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "ticket-service",
+                    "Port": 8080
+                }
+            ],
+            "UpstreamPathTemplate": "/tickets/health",
+            "UpstreamHttpMethod": [
+                "GET"
+            ]
+        },
+        {
+            "DownstreamPathTemplate": "/health",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "payment-service",
+                    "Port": 8080
+                }
+            ],
+            "UpstreamPathTemplate": "/payments/health",
+            "UpstreamHttpMethod": [
+                "GET"
+            ]
+        },
+        {
+            "DownstreamPathTemplate": "/health",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "notification-service",
+                    "Port": 8080
+                }
+            ],
+            "UpstreamPathTemplate": "/notifications/health",
+            "UpstreamHttpMethod": [
+                "GET"
+            ]
         }
     ],
     "GlobalConfiguration": {

@@ -24,7 +24,15 @@ builder.Services.AddHealthChecks();
 // Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Event Service API",
+        Version = "v1",
+        Description = "Event Management Service for Evently"
+    });
+});
 
 // CORS
 builder.Services.AddCors(options =>

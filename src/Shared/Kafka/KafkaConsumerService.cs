@@ -37,13 +37,22 @@ public abstract class KafkaConsumerService<T> : BackgroundService
 
     private void StartConsumerLoop(CancellationToken cancellationToken)
     {
-        _consumer.Subscribe(_topic);
+        try
+        {
+            _consumer.Subscribe(_topic);
+            _logger.LogInformation("Kafka topic'e abone olundu: {Topic}", _topic);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Kafka'ya bağlanılamadı. Kafka consumer devre dışı. Topic: {Topic}", _topic);
+            return;
+        }
 
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var result = _consumer.Consume(cancellationToken);
+                var result = _consumer.Consume(TimeSpan.FromSeconds(5));
 
                 if (result != null)
                 {
@@ -59,13 +68,26 @@ public abstract class KafkaConsumerService<T> : BackgroundService
             {
                 break;
             }
+            catch (ConsumeException ex) when (ex.Error.Code == ErrorCode.UnknownTopicOrPart)
+            {
+                _logger.LogWarning("Kafka topic henüz oluşturulmamış: {Topic}. 10 saniye bekleniyor...", _topic);
+                Thread.Sleep(10000);
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Kafka mesaj işleme hatası");
+                Thread.Sleep(5000);
             }
         }
 
-        _consumer.Close();
+        try
+        {
+            _consumer.Close();
+        }
+        catch
+        {
+            // Ignore close errors
+        }
     }
 
     protected abstract Task ProcessMessage(T message);

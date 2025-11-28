@@ -1,6 +1,131 @@
-@ApiGateway_HostAddress = http://localhost:5177
+@ApiGateway_HostAddress = http://localhost:5000
+@Token = YOUR_JWT_TOKEN_HERE
 
-GET {{ApiGateway_HostAddress}}/weatherforecast/
+### Gateway Info
+GET {{ApiGateway_HostAddress}}/
+Accept: application/json
+
+### Gateway Swagger UI
+GET {{ApiGateway_HostAddress}}/swagger
+
+### Gateway Health Check
+GET {{ApiGateway_HostAddress}}/health
+Accept: application/json
+
+###
+### IDENTITY SERVICE
+###
+
+### Register User
+POST {{ApiGateway_HostAddress}}/identity/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@evently.com",
+  "password": "Test123!",
+  "firstName": "Test",
+  "lastName": "User"
+}
+
+### Login
+POST {{ApiGateway_HostAddress}}/identity/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@evently.com",
+  "password": "Test123!"
+}
+
+### Identity Service Health
+GET {{ApiGateway_HostAddress}}/identity/health
+Accept: application/json
+
+###
+### EVENT SERVICE
+###
+
+### Get All Events
+GET {{ApiGateway_HostAddress}}/events
+Accept: application/json
+
+### Get Event by ID
+GET {{ApiGateway_HostAddress}}/events/1
+Accept: application/json
+
+### Create Event (Requires Auth)
+POST {{ApiGateway_HostAddress}}/events
+Content-Type: application/json
+Authorization: Bearer {{Token}}
+
+{
+  "title": "Test Event",
+  "description": "Test Description",
+  "location": "Test Location",
+  "startDate": "2025-12-01T19:00:00",
+  "endDate": "2025-12-01T23:00:00",
+  "capacity": 100,
+  "price": 50.00
+}
+
+### Event Service Health
+GET {{ApiGateway_HostAddress}}/events/health
+Accept: application/json
+
+###
+### TICKET SERVICE
+###
+
+### Get All Tickets
+GET {{ApiGateway_HostAddress}}/tickets
+Accept: application/json
+Authorization: Bearer {{Token}}
+
+### Purchase Ticket (Requires Auth)
+POST {{ApiGateway_HostAddress}}/tickets
+Content-Type: application/json
+Authorization: Bearer {{Token}}
+
+{
+  "eventId": "1",
+  "quantity": 2
+}
+
+### Ticket Service Health
+GET {{ApiGateway_HostAddress}}/tickets/health
+Accept: application/json
+
+###
+### PAYMENT SERVICE
+###
+
+### Get Payment History (Requires Auth)
+GET {{ApiGateway_HostAddress}}/payments
+Accept: application/json
+Authorization: Bearer {{Token}}
+
+### Payment Service Health
+GET {{ApiGateway_HostAddress}}/payments/health
+Accept: application/json
+
+###
+### NOTIFICATION SERVICE
+###
+
+### Get Notifications (Requires Auth)
+GET {{ApiGateway_HostAddress}}/notifications
+Accept: application/json
+Authorization: Bearer {{Token}}
+
+### Notification Service Health
+GET {{ApiGateway_HostAddress}}/notifications/health
+Accept: application/json
+
+###
+### RATE LIMITING TEST
+###
+
+### Test Rate Limit (Send this 100+ times to trigger limit)
+GET {{ApiGateway_HostAddress}}/
 Accept: application/json
 
 ###

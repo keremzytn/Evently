@@ -38,18 +38,21 @@ public class TicketServiceImpl : ITicketService
         _context.Tickets.Add(ticket);
         await _context.SaveChangesAsync();
 
-        // Kafka'ya event gönder
-        var ticketCreatedEvent = new TicketCreatedEvent
+        // Kafka'ya event gönder (eğer yapılandırılmışsa)
+        if (_kafkaProducer != null)
         {
-            TicketId = ticket.Id,
-            UserId = ticket.UserId,
-            EventId = ticket.EventId,
-            Price = ticket.Price,
-            TicketCode = ticket.TicketCode,
-            PurchasedAt = ticket.PurchasedAt
-        };
+            var ticketCreatedEvent = new TicketCreatedEvent
+            {
+                TicketId = ticket.Id,
+                UserId = ticket.UserId,
+                EventId = ticket.EventId,
+                Price = ticket.Price,
+                TicketCode = ticket.TicketCode,
+                PurchasedAt = ticket.PurchasedAt
+            };
 
-        await _kafkaProducer.ProduceAsync("ticket-created", ticket.TicketCode, ticketCreatedEvent);
+            await _kafkaProducer.ProduceAsync("ticket-created", ticket.TicketCode, ticketCreatedEvent);
+        }
 
         return ticket;
     }

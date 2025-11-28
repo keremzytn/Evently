@@ -1,0 +1,131 @@
+{
+    "Routes": [
+        {
+            "SwaggerKey": "identity",
+            "DownstreamPathTemplate": "/swagger/v1/swagger.json",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 5001
+                }
+            ],
+            "UpstreamPathTemplate": "/identity/swagger.json",
+            "UpstreamHttpMethod": [
+                "GET"
+            ]
+        },
+        {
+            "SwaggerKey": "events",
+            "DownstreamPathTemplate": "/swagger/v1/swagger.json",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 5002
+                }
+            ],
+            "UpstreamPathTemplate": "/events/swagger.json",
+            "UpstreamHttpMethod": [
+                "GET"
+            ]
+        },
+        {
+            "SwaggerKey": "tickets",
+            "DownstreamPathTemplate": "/swagger/v1/swagger.json",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 5003
+                }
+            ],
+            "UpstreamPathTemplate": "/tickets/swagger.json",
+            "UpstreamHttpMethod": [
+                "GET"
+            ]
+        },
+        {
+            "SwaggerKey": "payments",
+            "DownstreamPathTemplate": "/swagger/v1/swagger.json",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 5004
+                }
+            ],
+            "UpstreamPathTemplate": "/payments/swagger.json",
+            "UpstreamHttpMethod": [
+                "GET"
+            ]
+        },
+        {
+            "SwaggerKey": "notifications",
+            "DownstreamPathTemplate": "/swagger/v1/swagger.json",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 5005
+                }
+            ],
+            "UpstreamPathTemplate": "/notifications/swagger.json",
+            "UpstreamHttpMethod": [
+                "GET"
+            ]
+        }
+    ],
+    "SwaggerEndPoints": [
+        {
+            "Key": "identity",
+            "Config": [
+                {
+                    "Name": "Identity Service",
+                    "Version": "v1",
+                    "Url": "http://localhost:5001/swagger/v1/swagger.json"
+                }
+            ]
+        },
+        {
+            "Key": "events",
+            "Config": [
+                {
+                    "Name": "Event Service",
+                    "Version": "v1",
+                    "Url": "http://localhost:5002/swagger/v1/swagger.json"
+                }
+            ]
+        },
+        {
+            "Key": "tickets",
+            "Config": [
+                {
+                    "Name": "Ticket Service",
+                    "Version": "v1",
+                    "Url": "http://localhost:5003/swagger/v1/swagger.json"
+                }
+            ]
+        },
+        {
+            "Key": "payments",
+            "Config": [
+                {
+                    "Name": "Payment Service",
+                    "Version": "v1",
+                    "Url": "http://localhost:5004/swagger/v1/swagger.json"
+                }
+            ]
+        },
+        {
+            "Key": "notifications",
+            "Config": [
+                {
+                    "Name": "Notification Service",
+                    "Version": "v1",
+                    "Url": "http://localhost:5005/swagger/v1/swagger.json"
+                }
+            ]
+        }
+    ]
+}
