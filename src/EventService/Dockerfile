@@ -4,12 +4,14 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY ["EventService.csproj", "./"]
-RUN dotnet restore "EventService.csproj"
+COPY ["EventService/EventService.csproj", "EventService/"]
+RUN dotnet restore "EventService/EventService.csproj"
 COPY . .
+WORKDIR "/src/EventService"
 RUN dotnet build "EventService.csproj" -c Release -o /app/build
 
 FROM build AS publish
+WORKDIR "/src/EventService"
 RUN dotnet publish "EventService.csproj" -c Release -o /app/publish
 
 FROM base AS final

@@ -70,8 +70,8 @@ services:
   # Identity Service
   identity-service:
     build:
-      context: ./src/IdentityService
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: IdentityService/Dockerfile
     container_name: evently-identity
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -88,8 +88,8 @@ services:
   # Event Service
   event-service:
     build:
-      context: ./src/EventService
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: EventService/Dockerfile
     container_name: evently-events
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -106,8 +106,8 @@ services:
   # Ticket Service
   ticket-service:
     build:
-      context: ./src/TicketService
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: TicketService/Dockerfile
     container_name: evently-tickets
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -126,8 +126,8 @@ services:
   # Payment Service
   payment-service:
     build:
-      context: ./src/PaymentService
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: PaymentService/Dockerfile
     container_name: evently-payments
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -144,8 +144,8 @@ services:
   # Notification Service
   notification-service:
     build:
-      context: ./src/NotificationService
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: NotificationService/Dockerfile
     container_name: evently-notifications
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -162,8 +162,8 @@ services:
   # API Gateway
   api-gateway:
     build:
-      context: ./src/ApiGateway
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: ApiGateway/Dockerfile
     container_name: evently-gateway
     environment:
       - ASPNETCORE_ENVIRONMENT=Development

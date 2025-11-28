@@ -4,12 +4,14 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY ["IdentityService.csproj", "./"]
-RUN dotnet restore "IdentityService.csproj"
+COPY ["IdentityService/IdentityService.csproj", "IdentityService/"]
+RUN dotnet restore "IdentityService/IdentityService.csproj"
 COPY . .
+WORKDIR "/src/IdentityService"
 RUN dotnet build "IdentityService.csproj" -c Release -o /app/build
 
 FROM build AS publish
+WORKDIR "/src/IdentityService"
 RUN dotnet publish "IdentityService.csproj" -c Release -o /app/publish
 
 FROM base AS final

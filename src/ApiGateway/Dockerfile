@@ -4,12 +4,14 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY ["ApiGateway.csproj", "./"]
-RUN dotnet restore "ApiGateway.csproj"
+COPY ["ApiGateway/ApiGateway.csproj", "ApiGateway/"]
+RUN dotnet restore "ApiGateway/ApiGateway.csproj"
 COPY . .
+WORKDIR "/src/ApiGateway"
 RUN dotnet build "ApiGateway.csproj" -c Release -o /app/build
 
 FROM build AS publish
+WORKDIR "/src/ApiGateway"
 RUN dotnet publish "ApiGateway.csproj" -c Release -o /app/publish
 
 FROM base AS final
