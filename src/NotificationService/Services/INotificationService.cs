@@ -5,6 +5,7 @@ namespace NotificationService.Services;
 public interface INotificationService
 {
     Task SendNotificationAsync(string userId, string title, string message, NotificationType type);
+    Task SendNotificationAsync(NotificationDispatchRequest request);
     Task<List<Notification>> GetUserNotificationsAsync(string userId);
     Task MarkAsReadAsync(string notificationId);
 }

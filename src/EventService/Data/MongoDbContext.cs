@@ -17,5 +17,9 @@ public class MongoDbContext
     }
 
     public IMongoCollection<Event> Events => _database.GetCollection<Event>("events");
+    public IMongoCollection<EventFeedback> EventFeedback => _database.GetCollection<EventFeedback>("event_feedback");
+    public IMongoCollection<EventRatingSummary> EventFeedbackSummaries => _database.GetCollection<EventRatingSummary>("event_feedback_summary");
+    public IMongoCollection<UserFavorite> UserFavorites => _database.GetCollection<UserFavorite>("user_favorites");
+    public IMongoCollection<CalendarEntry> CalendarEntries => _database.GetCollection<CalendarEntry>("calendar_entries");
 }
 

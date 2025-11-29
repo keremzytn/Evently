@@ -31,6 +31,7 @@ else
 
 // Services
 builder.Services.AddScoped<IPaymentService, PaymentServiceImpl>();
+builder.Services.AddSingleton<IPromoCodeService, PromoCodeService>();
 
 // HealthChecks
 builder.Services.AddHealthChecks();
