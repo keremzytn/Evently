@@ -17,10 +17,6 @@ builder.Services.AddSingleton<MongoDbContext>();
 
 // Services
 builder.Services.AddScoped<IEventService, EventServiceImpl>();
-builder.Services.AddScoped<IFeedbackService, FeedbackService>();
-builder.Services.AddScoped<IFavoriteService, FavoriteService>();
-builder.Services.AddScoped<ICalendarService, CalendarService>();
-builder.Services.AddScoped<ISearchService, SearchService>();
 
 // HealthChecks
 builder.Services.AddHealthChecks();

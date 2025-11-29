@@ -34,19 +34,15 @@ public class NotificationsController : ControllerBase
     }
 
     [HttpPost("send")]
-    public async Task<IActionResult> SendNotification([FromBody] NotificationDispatchRequest request)
+    public async Task<IActionResult> SendNotification([FromBody] SendNotificationRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.UserId))
-        {
-            request.UserId = Request.Headers["X-User-Id"].ToString();
-        }
+        await _notificationService.SendNotificationAsync(
+            request.UserId,
+            request.Title,
+            request.Message,
+            request.Type
+        );
 
-        if (string.IsNullOrWhiteSpace(request.UserId))
-        {
-            return BadRequest(new { message = "UserId zorunludur" });
-        }
-
-        await _notificationService.SendNotificationAsync(request);
         return Ok(new { message = "Bildirim gönderildi" });
     }
 
@@ -55,5 +51,13 @@ public class NotificationsController : ControllerBase
     {
         return Ok(new { status = "Healthy", service = "Notification Service", timestamp = DateTime.UtcNow });
     }
+}
+
+public class SendNotificationRequest
+{
+    public string UserId { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public NotificationType Type { get; set; }
 }
 
