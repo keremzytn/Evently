@@ -14,6 +14,18 @@ public class TicketsController : ControllerBase
         _ticketService = ticketService;
     }
 
+    [HttpPost("qr/verify")]
+    public async Task<IActionResult> VerifyQr([FromBody] QrVerificationRequest dto)
+    {
+        var result = await _ticketService.VerifyQrAsync(dto);
+        if (!result.IsValid)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+
     [HttpPost("purchase")]
     public async Task<IActionResult> PurchaseTicket([FromBody] PurchaseTicketDto dto)
     {
@@ -85,6 +97,69 @@ public class TicketsController : ControllerBase
         catch (InvalidOperationException ex)
         {
             return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("locks")]
+    public async Task<IActionResult> HoldSeats([FromBody] SeatLockRequestDto dto)
+    {
+        var userId = Request.Headers["X-User-Id"].ToString();
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { message = "Kullanıcı kimliği bulunamadı" });
+
+        try
+        {
+            var response = await _ticketService.LockSeatsAsync(userId, dto);
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("locks/{lockToken}")]
+    public async Task<IActionResult> ReleaseSeats(string lockToken)
+    {
+        var userId = Request.Headers["X-User-Id"].ToString();
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { message = "Kullanıcı kimliği bulunamadı" });
+
+        var released = await _ticketService.ReleaseLockAsync(userId, lockToken);
+        if (!released)
+            return NotFound(new { message = "Kilitleme kaydı bulunamadı" });
+
+        return NoContent();
+    }
+
+    [HttpPost("locks/{lockToken}/commit")]
+    public async Task<IActionResult> CommitSeats(string lockToken, [FromBody] SeatCommitRequestDto dto)
+    {
+        var success = await _ticketService.CommitLockAsync(lockToken, dto);
+        if (!success)
+            return NotFound(new { message = "Kilitleme kaydı bulunamadı veya süresi doldu" });
+
+        return Ok(new { message = "Koltuklar işaretlendi" });
+    }
+
+    [HttpPost("{ticketId:int}/cancel")]
+    public async Task<IActionResult> RequestCancellation(int ticketId, [FromBody] TicketCancellationRequestDto dto)
+    {
+        var userId = Request.Headers["X-User-Id"].ToString();
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { message = "Kullanıcı kimliği bulunamadı" });
+
+        try
+        {
+            var response = await _ticketService.RequestCancellationAsync(ticketId, userId, dto);
+            if (response == null)
+                return NotFound(new { message = "Bilet bulunamadı" });
+
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
     }
 
